@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,7 +25,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -36,7 +34,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -46,8 +43,10 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -58,6 +57,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -72,11 +72,10 @@ import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.ContentAlpha
 import com.example.myapplicationjetnote.ui.theme.MyApplicationJETNOTETheme
 
-private var email : String = "linskin"
-private var password : String = "123"
-private var isPasswordVisible : Boolean = false
-private var text: String = ""
-
+private  var useremail = ""
+//private var password : String = "123"
+//private var isPasswordVisible : Boolean = false
+data class Note(val content: String, val timestamp: String)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -95,10 +94,10 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun LoginScreen(onContinueClicked: () -> Unit) {
-//    var email by remember { mutableStateOf("") }
-//    var password by remember { mutableStateOf("") }
-//    var isPasswordVisible by remember { mutableStateOf(false) }
+fun LoginScreen(onContinueClicked: () -> Unit) {
+    var email by remember { mutableStateOf("linskin@foxmail.com") }
+    var password by remember { mutableStateOf("123456") }
+    var isPasswordVisible by remember { mutableStateOf(false) }
 
 //    val density = LocalDensity.current.density
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -128,6 +127,7 @@ private fun LoginScreen(onContinueClicked: () -> Unit) {
         // 登录邮箱输入框
         OutlinedTextField(
             value = email,
+            singleLine = true,
             onValueChange = { email = it },
             label = { Text("邮箱") },
             leadingIcon = { Icon(imageVector = Icons.Default.Email, contentDescription = "邮箱") },
@@ -138,6 +138,7 @@ private fun LoginScreen(onContinueClicked: () -> Unit) {
 
         // 登录密码输入框
         OutlinedTextField(
+            singleLine = true,
             value = password,                               // 文本框显示的初始值
             onValueChange = { password = it },               // 当文本框的值改变时调用的回调函数
             label = { Text("密码") },                        // 文本框的标签
@@ -170,6 +171,7 @@ private fun LoginScreen(onContinueClicked: () -> Unit) {
                 } else {
                     // 否则，显示欢迎信息
 //                    Toast.makeText(currentCompositionLocalContext, "欢迎 $email", Toast.LENGTH_SHORT).show()
+                    useremail = email
                     onContinueClicked()
                 }
             },
@@ -271,12 +273,8 @@ private fun Greetings(items: List<String> = listOf("World", "Jetpack Compose", "
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun myTopBar(){
+    val email= useremail
     TopAppBar(title = {Text("$email")},
-        navigationIcon = {
-            IconButton(onClick = { backIconOnClick() }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "返回")
-            }
-        },
         actions = {
             IconButton(onClick = { actionIconOnClick() }) {
                 Icon(Icons.Default.Search, contentDescription = "搜索")
@@ -291,12 +289,9 @@ private fun myTopBar(){
 }
 
 fun backIconOnClick() {
-    TODO("Not yet implemented")
+
 }
 
-private fun navigationIconOnClick() {
-    TODO("Not yet implemented")
-}
 private fun actionIconOnClick() {
     TODO("Not yet implemented")
 }
@@ -313,26 +308,27 @@ private fun floatingActionButtonOnClick(onContinueClicked : () -> Unit) {
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
-//@Preview
 @Composable
-private fun NotebookScreen() {
+private fun NotebookScreen(onContinueClicked: () -> Unit) {
+    val noteTextState = rememberSaveable { mutableStateOf("") }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        topBar = { notBookTopBar()},
+        topBar = { notBookTopBar(onContinueClicked,noteTextState)},
 //        floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = { noteBookFloatingActionButton() },
         containerColor = Color(0xC4E9DCFE),
-        content = { noteBookContent()},
+        content = { noteBookContent(noteTextState)},
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun noteBookContent() {
+fun noteBookContent(textState: MutableState<String>) {
     TextField(
-        value = text,
-        onValueChange = { text = it },
-        label = { Text("笔记标题") },
+        value = textState.value,
+        onValueChange = { textState.value = it},
+        label = { Text("note") },
+        placeholder = { Text("请输入笔记内容") },
         modifier = Modifier
             .fillMaxWidth()
             .fillMaxHeight()
@@ -346,31 +342,28 @@ fun noteBookFloatingActionButton() {
     FloatingActionButton(onClick = {saveButtonOnClick()}){
         Icon(Icons.Default.Done, contentDescription = "保存")
     }
-//    FloatingActionButton(onClick = {clearButtonOnClick()}){
-//        Icon(Icons.Default.Delete, contentDescription = "清空")
-//    }
 }
 
-fun clearButtonOnClick() {
-    TODO("Not yet implemented")
-}
+
 
 fun saveButtonOnClick() {
-    TODO("Not yet implemented")
+    //在此处执行将信息保存至数据库的操作
+    //将数据加入数据库
+    //数量类型：日期（直接调用），文本内容
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun notBookTopBar() {
+fun notBookTopBar(onContinueClicked: () -> Unit,textState: MutableState<String>) {
     TopAppBar(
         title = { Text(if (false) "修改笔记" else "新建笔记") },
         navigationIcon = {
-            IconButton(onClick = { backIconOnClick() }) {
+            IconButton(onClick = { onContinueClicked() }) {
                 Icon(Icons.Default.ArrowBack, contentDescription = "返回")
             }
         },
         actions = {
-            IconButton(onClick = { deleteIconOnClick() }) {
+            IconButton(onClick = { clearButtonOnClick(textState) }) {
                 Icon(Icons.Default.Delete, contentDescription = "清空")
             }
         },
@@ -382,13 +375,15 @@ fun notBookTopBar() {
     )
 }
 
-fun deleteIconOnClick() {
-    TODO("Not yet implemented")
+fun clearButtonOnClick(textState: MutableState<String>) {
+    textState.value = ""
 }
 @Preview
 @Composable
 private fun MyApp(modifier: Modifier = Modifier) {
     // 创建一个名为shouldShowOnboarding的可变状态变量，使用rememberSaveable进行保存
+//    var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
+//    var shouldShowNotebookScreen by rememberSaveable { mutableStateOf(true) }
     var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
     var shouldShowNotebookScreen by rememberSaveable { mutableStateOf(false) }
     // 创建一个Surface组件，并使用modifier作为修饰符
@@ -400,10 +395,10 @@ private fun MyApp(modifier: Modifier = Modifier) {
             } else {
                 // 如果shouldShowOnboarding为false，则显示Greetings组件
 //            Greetings()
-                MainScreen(onContinueClicked = { shouldShowNotebookScreen = true })
+                MainScreen(onContinueClicked = { shouldShowNotebookScreen = !shouldShowNotebookScreen })
             }
         }else{
-            NotebookScreen()
+            NotebookScreen { shouldShowNotebookScreen = !shouldShowNotebookScreen }
         }
         }
 
