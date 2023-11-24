@@ -57,7 +57,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -71,6 +70,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.wear.compose.material.ContentAlpha
 import com.example.myapplicationjetnote.ui.theme.MyApplicationJETNOTETheme
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private  var useremail = ""
 //private var password : String = "123"
@@ -209,24 +210,24 @@ fun LoginScreen(onContinueClicked: () -> Unit) {
 //        content = { myContent()},
 //    )
 //}
-fun MainScreen(onContinueClicked: () -> Unit) {
+fun MainScreen(onContinueClicked: () -> Unit, notes: MutableState<List<Note>>) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = { myTopBar()},
         floatingActionButtonPosition = FabPosition.Center,
         floatingActionButton = { myFloatingActionButton(onContinueClicked) },
         containerColor = Color(0xC4E9DCFE),
-        content = { myContent()},
+        content = { myContent(notes)},
     )
 }
 
 @Composable
-fun myContent() {
-    Greetings()
+fun myContent(notes: MutableState<List<Note>>) {
+    Greetings(notes)
 }
 
 @Composable
-fun CardDemo(item: String) {
+fun CardDemo(item: Note) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,20 +239,17 @@ fun CardDemo(item: String) {
         ) {
             Text(
                 buildAnnotatedString {
-                    append("welcome!")
                     withStyle(style = SpanStyle(fontWeight = FontWeight.W900, color = Color(0xFF4552B8))
                     ) {
-                        append("$item")
+                        append(item.timestamp)
                     }
                 }
             )
             Text(
                 buildAnnotatedString {
-                    append("Now you are in the ")
                     withStyle(style = SpanStyle(fontWeight = FontWeight.W900)) {
-                        append("Card")
+                        append(item.content)
                     }
-                    append(" section")
                 }
             )
         }
@@ -259,13 +257,12 @@ fun CardDemo(item: String) {
 }
 
 @Composable
-private fun Greetings(items: List<String> = listOf("World", "Jetpack Compose", "Kotlin")) {
+private fun Greetings(items: MutableState<List<Note>>) {
     LazyColumn(
         modifier = Modifier.padding(top = 70.dp)
     ) {
-        items(items = items) { item ->
+        items(items = items.value) { item ->
             CardDemo(item = item)
-
         }
     }
 }
@@ -302,20 +299,17 @@ private fun myFloatingActionButton(onContinueClicked: () -> Unit){
         Icon(Icons.Default.Add, contentDescription = "添加")
     }
 }
-private fun floatingActionButtonOnClick(onContinueClicked : () -> Unit) {
-    TODO("Not yet implemented")
-}
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotebookScreen(onContinueClicked: () -> Unit) {
+private fun NotebookScreen(onContinueClicked: () -> Unit, notes: MutableState<List<Note>>) {
     val noteTextState = rememberSaveable { mutableStateOf("") }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = { notBookTopBar(onContinueClicked,noteTextState)},
 //        floatingActionButtonPosition = FabPosition.Center,
-        floatingActionButton = { noteBookFloatingActionButton() },
+        floatingActionButton = { noteBookFloatingActionButton(onContinueClicked,noteTextState,notes) },
         containerColor = Color(0xC4E9DCFE),
         content = { noteBookContent(noteTextState)},
     )
@@ -338,18 +332,26 @@ fun noteBookContent(textState: MutableState<String>) {
     )
 }
 @Composable
-fun noteBookFloatingActionButton() {
-    FloatingActionButton(onClick = {saveButtonOnClick()}){
+fun noteBookFloatingActionButton(
+    onContinueClicked: () -> Unit,
+    textState: MutableState<String>,
+    notes: MutableState<List<Note>>
+) {
+    FloatingActionButton(onClick = {onContinueClicked();saveButtonOnClick(textState, notes)}){
         Icon(Icons.Default.Done, contentDescription = "保存")
     }
 }
 
 
 
-fun saveButtonOnClick() {
+fun saveButtonOnClick(textState: MutableState<String>, notes: MutableState<List<Note>>) {
     //在此处执行将信息保存至数据库的操作
     //将数据加入数据库
     //数量类型：日期（直接调用），文本内容
+    val currentTime = LocalDateTime.now()
+    val formattedTime = currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+    val newNote = Note(content = textState.value, timestamp = formattedTime)
+    notes.value += newNote
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -384,8 +386,9 @@ private fun MyApp(modifier: Modifier = Modifier) {
     // 创建一个名为shouldShowOnboarding的可变状态变量，使用rememberSaveable进行保存
 //    var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
 //    var shouldShowNotebookScreen by rememberSaveable { mutableStateOf(true) }
+    val notes = rememberSaveable { mutableStateOf(listOf<Note>()) }
     var shouldShowOnboarding by rememberSaveable { mutableStateOf(true) }
-    var shouldShowNotebookScreen by rememberSaveable { mutableStateOf(false) }
+    var shouldShowNotebookScreen by rememberSaveable { mutableStateOf(true) }
     // 创建一个Surface组件，并使用modifier作为修饰符
     Surface(modifier) {
         // 如果shouldShowOnboarding为true，则显示OnboardingScreen组件，并传入一个lambda函数作为点击事件，点击事件会将shouldShowOnboarding的值设为false
@@ -395,10 +398,10 @@ private fun MyApp(modifier: Modifier = Modifier) {
             } else {
                 // 如果shouldShowOnboarding为false，则显示Greetings组件
 //            Greetings()
-                MainScreen(onContinueClicked = { shouldShowNotebookScreen = !shouldShowNotebookScreen })
+                MainScreen(onContinueClicked = { shouldShowNotebookScreen = !shouldShowNotebookScreen },notes = notes)
             }
         }else{
-            NotebookScreen { shouldShowNotebookScreen = !shouldShowNotebookScreen }
+            NotebookScreen(onContinueClicked =  { shouldShowNotebookScreen = !shouldShowNotebookScreen},notes = notes)
         }
         }
 

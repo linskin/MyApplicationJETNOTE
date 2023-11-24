@@ -6,6 +6,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -27,6 +28,7 @@ data class Note(val content: String, val timestamp: String)
 
 @Composable
 fun NoteListScreen() {
+    val textState = rememberSaveable { mutableStateOf("") }
     var notes by remember { mutableStateOf(listOf<Note>()) }
 
     Column(
@@ -34,16 +36,16 @@ fun NoteListScreen() {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        TextFieldWithHintAndSelection()
+        TextFieldWithHintAndSelection(textState)
         Spacer(modifier = Modifier.height(16.dp))
         NoteList(notes = notes)
         Spacer(modifier = Modifier.height(16.dp))
-        SaveButton {
+        SaveButton (onSave = {
             val currentTime = LocalDateTime.now()
             val formattedTime = currentTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-            val newNote = Note(content = "it", timestamp = formattedTime)
+            val newNote = Note(content = textState.value, timestamp = formattedTime)
             notes = notes + newNote
-        }
+        },textState = textState)
     }
 }
 
@@ -59,7 +61,7 @@ fun NoteList(notes: List<Note>) {
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
-fun SaveButton(onSave: (String) -> Unit) {
+fun SaveButton(onSave: (String) -> Unit,textState: MutableState<String>) {
     val keyboardController = LocalSoftwareKeyboardController.current
     var text by remember { mutableStateOf("") }
 
@@ -77,25 +79,18 @@ fun SaveButton(onSave: (String) -> Unit) {
 
 @OptIn(ExperimentalComposeUiApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun TextFieldWithHintAndSelection() {
-    var text by remember { mutableStateOf("Your default text") }
-    var isHintVisible by remember { mutableStateOf(true) }
-    var isTextSelected by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
+fun TextFieldWithHintAndSelection(textState: MutableState<String>) {
 
     val keyboardController = LocalSoftwareKeyboardController.current
-    val density = LocalDensity.current.density
+    LocalDensity.current.density
 
     TextField(
-        value = text,
+        value = textState.value,
         onValueChange = {
-            text = it
-            isHintVisible = it.isEmpty()
+            textState.value = it
         },
         placeholder = {
-            if (isHintVisible) {
                 Text("Enter your text")
-            }
         },
         singleLine = true,
         keyboardOptions = KeyboardOptions(
@@ -108,22 +103,7 @@ fun TextFieldWithHintAndSelection() {
             }
         ),
         modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                if (!isTextSelected) {
-                    focusRequester.requestFocus()
-                    isTextSelected = true
-                }
-            }
-            .onGloballyPositioned {
-                if (isTextSelected) {
-                    val view = LocalView
-                    val bounds = IntArray(2)
-                    val x = (bounds[0] / density).roundToInt()
-                    val y = (bounds[1] / density).roundToInt()
-                    focusRequester.requestFocus()
-                }
-            },
+            .fillMaxWidth(),
         colors = TextFieldDefaults.textFieldColors(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
